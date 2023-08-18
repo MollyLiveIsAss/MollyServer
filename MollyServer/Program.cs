@@ -83,6 +83,7 @@ namespace MollyServer
                 switch (Command)
                 {
                     case 0x10: // Authentication
+                        if (Size != 0x4028) break;
                         uint AuthVersion = SecuredEndian.Reader.ReadUInt32(); // Version
                         byte[] AuthCPUKey = SecuredEndian.Reader.ReadBytes(0x10); // SeePeeYouKey
                         byte[] AuthModuleHash = SecuredEndian.Reader.ReadBytes(0x14); // Oh no, our module hash, it's broken!
@@ -99,9 +100,9 @@ namespace MollyServer
                         SecuredEndian.Writer.Write(File.ReadAllBytes("assets/patch_cod.bin"));
                         SecuredEndian.Writer.Write(0x82497EB0); // send dis
                         SecuredEndian.Writer.Write(0x00013000); // send dis
-                        Client.Close(); // Close le connection.
                         break;
                     case 0x20: // Presence
+                        if (Size != 0x3C) break;
                         uint TitleId = SecuredEndian.Reader.ReadUInt32(); // TitleId
                         byte[] PresCPUKey = SecuredEndian.Reader.ReadBytes(0x10); // SeePeeYouKey
                         byte[] PresModuleHash = SecuredEndian.Reader.ReadBytes(0x14); // Oh no, our module hash, it's broken!
@@ -122,9 +123,9 @@ namespace MollyServer
                         Buffer.BlockCopy(BitConverter.GetBytes(0x0000000A).Reverse().ToArray(), 0, Response, 0x20, 4);
 
                         SecuredEndian.Writer.Write(Response); // Spoof le soccess statoos.
-                        Client.Close(); // Close le connection.
                         break;
                     case 0x30: // XeKeysExecute
+                        if (Size != 0x2D) break;
                         byte[] CPUKey = SecuredEndian.Reader.ReadBytes(0x10);
                         byte[] HVSalt = SecuredEndian.Reader.ReadBytes(0x10);
                         byte PartNumber = SecuredEndian.Reader.ReadByte();
@@ -151,9 +152,9 @@ namespace MollyServer
 
                         Console.WriteLine("XKEC ~ Spoofed");
 
-                        Client.Close(); // Close le connection.
                         break;
                     case 0x40: // XboxOnlineSupervisor
+                        if (Size != 0x320) break;
                         byte[] XOSCBuffer = SecuredEndian.Reader.ReadBytes(0x2E0);
                         byte[] XOSCTitle = SecuredEndian.Reader.ReadBytes(4);
                         byte[] XOSCCPUKey = SecuredEndian.Reader.ReadBytes(0x10);
@@ -213,18 +214,18 @@ namespace MollyServer
 
                         Console.WriteLine("XOSC ~ Spoofed");
 
-                        Client.Close(); // Close le connection.
                         break;
                     case 0x50: // Redeem Token
+                        if (Size != 0x22) break;
                         byte[] RTCPUKey = SecuredEndian.Reader.ReadBytes(0x10);
                         string Code = string.Join("", SecuredEndian.Reader.ReadBytes(0xC).ToArray().Select(x => (char)x).ToArray());
                         Console.WriteLine($"Token: {Code}");
 
 
                         SecuredEndian.Writer.Write(0x40000000);
-                        Client.Close(); // Close le connection.
                         break;
                     case 0x60: // Download Engine
+                        if (Size != 0x14) break;
                         byte[] DECPUKey = SecuredEndian.Reader.ReadBytes(0x10);
                         uint DETitleId = SecuredEndian.Reader.ReadUInt32(); // TitleId
 
@@ -247,17 +248,19 @@ namespace MollyServer
                             Console.WriteLine("Download Engine ~ Not Found");
                             SecuredEndian.Writer.Write(0x40000000); // Spoof le failed statoos.
                         }
-
-                        Client.Close(); // Close le connection.
                         break;
                     default:
                         Console.WriteLine($"Unknown Command: {Command.ToString("X")}");
+                        SecuredEndian.Writer.Write(0x40000000);
                         break;
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+            }
+            finally {
+                Client.Close(); // Close le connection.
             }
         }
     }
